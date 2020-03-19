@@ -99,5 +99,5 @@ theme: fexo
 ## Docs: https://hexo.io/docs/deployment.html
 deploy:
   type: git
-  repo: https://github.com/mechanicwei/mechanicwei.github.io
+  repo: git@github.com:mechanicwei/mechanicwei.github.io.git
   branch: master
