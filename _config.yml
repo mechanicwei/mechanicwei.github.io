@@ -98,4 +98,6 @@ theme: fexo
 # Deployment
 ## Docs: https://hexo.io/docs/deployment.html
 deploy:
-  type: ''
+  type: git
+  repo: https://github.com/mechanicwei/mechanicwei.github.io
+  branch: master
