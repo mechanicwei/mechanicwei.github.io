@@ -10,13 +10,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Use Node.js 10.x
-      uses: actions/setup-node@v1
+    - name: Use Node.js 16.x
+      uses: actions/setup-node@v2
       with:
-        node-version: '10.x'
+        node-version: '16.x'
     - name: prepare build env
       env:
-        GH_ACTION_DEPLOY_KEY: ${{secrets.ACTION}}
+        GH_ACTION_DEPLOY_KEY: ${{ secrets.ACTION }}
       run: |
         mkdir -p ~/.ssh/
         echo "$GH_ACTION_DEPLOY_KEY" > ~/.ssh/id_rsa
@@ -25,6 +25,7 @@ jobs:
         git config --global user.name 'hw93'
         git config --global user.email 'mechanicwei@qq.com'
         npm i -g hexo-cli
+        npm install hexo-deployer-git --save
         npm i
     - name: deploy to github
       run: |
