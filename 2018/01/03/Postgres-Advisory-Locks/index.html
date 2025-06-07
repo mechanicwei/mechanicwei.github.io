@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+
+
+  <html class="light page-post">
+
+
+<head>
+  <meta charset="utf-8">
+  
+  <title>Postgres Advisory Locks | Mechanicwei Blog</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  
+    <meta name="keywords" content="后端,Ruby,Golang" />
+  
+
+  <meta name="description" content="问题Postgres的select ... for update可以锁住一行，但是想找一个可以带上purpose的锁住一行，purpose不同可以获得不同的锁。 方案然而并没有，但找到一个AdvisoryLocks。AdvisoryLocks可以根据不同的key，获得不同的锁。但是AdvisoryLocks的key只能是一个bigint或者两个int，不能传入字符串，就不能很明确的锁住一行。Goo">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Postgres Advisory Locks">
+<meta property="og:url" content="http://yoursite.com/2018/01/03/Postgres-Advisory-Locks/index.html">
+<meta property="og:site_name" content="Mechanicwei Blog">
+<meta property="og:description" content="问题Postgres的select ... for update可以锁住一行，但是想找一个可以带上purpose的锁住一行，purpose不同可以获得不同的锁。 方案然而并没有，但找到一个AdvisoryLocks。AdvisoryLocks可以根据不同的key，获得不同的锁。但是AdvisoryLocks的key只能是一个bigint或者两个int，不能传入字符串，就不能很明确的锁住一行。Goo">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2018-01-02T16:00:00.000Z">
+<meta property="article:modified_time" content="2025-06-07T00:22:36.723Z">
+<meta property="article:author" content="hw93">
+<meta name="twitter:card" content="summary">
+
+  
+
+  
+    <link rel="icon" href="/favicon.ico">
+  
+
+  <link href="/css/styles.css?v=c114cbeddx" rel="stylesheet">
+
+
+  
+    
+<link rel="stylesheet" href="/css/personal-style.css">
+
+  
+
+  
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-38189205-1', 'auto');
+ga('send', 'pageview');
+
+</script>
+<!-- End Google Analytics -->
+
+
+  
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?57e94d016e201fba3603a8a2b0263af0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+  
+  <script type="text/javascript">
+	(function(){
+	    var bp = document.createElement('script');
+	    var curProtocol = window.location.protocol.split(':')[0];
+	    if (curProtocol === 'https') {
+	        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+	    }
+	    else {
+	        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+	    }
+	    var s = document.getElementsByTagName("script")[0];
+	    s.parentNode.insertBefore(bp, s);
+	})();
+  </script>
+
+
+
+  
+
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+<body>
+
+
+  
+
+  <div class="post-header">
+   
+
+</div>
+
+
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">Posts List</strong>
+    <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%97%AE%E9%A2%98"><span class="toc-text">问题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%96%B9%E6%A1%88"><span class="toc-text">方案</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%9B%B8%E5%85%B3"><span class="toc-text">相关</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-text">总结</span></a></li></ol>
+  </div>
+
+
+
+<div class="content content-post CENTER">
+   <article id="post-Postgres-Advisory-Locks" class="article article-type-post" itemprop="blogPost">
+  <header class="article-header">
+    <h1 class="post-title">Postgres Advisory Locks</h1>
+
+    <div class="article-meta">
+      <span>
+        <i class="icon-calendar"></i>
+        <span>2018.01.03</span>
+      </span>
+
+      
+        <span class="article-author">
+          <i class="icon-user"></i>
+          <span>hw93</span>
+        </span>
+      
+
+      
+
+
+      
+
+      
+      
+    </div>
+  </header>
+
+  <div class="article-content">
+    
+      <h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p>Postgres的<code>select ... for update</code>可以锁住一行，但是想找一个可以带上purpose的锁住一行，purpose不同可以获得不同的锁。</p>
+<h3 id="方案"><a href="#方案" class="headerlink" title="方案"></a>方案</h3><p>然而并没有，但找到一个<a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/9.4/static/explicit-locking.html">AdvisoryLocks</a>。<br>AdvisoryLocks可以根据不同的key，获得不同的锁。但是AdvisoryLocks的key只能是一个<code>bigint</code>或者两个<code>int</code>，不能传入字符串，就不能很明确的锁住一行。<br>Google了一下，<a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/29353845/how-do-i-use-string-as-a-key-to-postgresql-advisory-lock">这篇文章</a>提供了一种解决方案<code>select pg_advisory_lock( hashtext(&#39;fredfred&#39;) );</code></p>
+<h3 id="相关"><a href="#相关" class="headerlink" title="相关"></a>相关</h3><p>Ruby还有一个相关的gem <a target="_blank" rel="noopener" href="https://github.com/ClosureTree/with_advisory_lock">with_advisory_lock</a>，该gem也支持字符串作为key，查看了一下源码：<br><code>Zlib.crc32(input.to_s)</code><br>使用crc将字符串转换成了数字。</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>不管哪种方法，都有一个缺陷，不能做到string映射int的唯一性</p>
+
+    
+  </div>
+
+</article>
+
+
+   
+
+   
+  <div class="box-prev-next clearfix">
+    <a class="show pull-left" href="/2017/11/29/omniauth-oauth2/">
+        <i class="icon icon-angle-left"></i>
+    </a>
+    <a class="show pull-right" href="/2020/03/15/%E5%BC%80%E5%8F%91%E4%B8%AD%E9%81%87%E5%88%B0%E7%9A%84sql%E4%BC%98%E5%8C%96/">
+        <i class="icon icon-angle-right"></i>
+    </a>
+  </div>
+
+
+
+
+</div>
+
+
+
+
+
+  <div class="modal" id="modal">
+  <span id="cover" class="cover hide"></span>
+  <div id="modal-dialog" class="modal-dialog hide-dialog">
+    <div class="modal-header">
+      <span id="close" class="btn-close">Close</span>
+    </div>
+    <hr>
+    <div class="modal-body">
+      <ul class="list-toolbox">
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/archives/"
+              rel="noopener noreferrer"
+              target="_self"
+              >
+              博客
+            </a>
+          </li>
+        
+      </ul>
+
+    </div>
+  </div>
+</div>
+
+
+
+  
+      <div class="fexo-comments comments-post">
+    
+
+    
+
+    
+    
+
+    
+
+    
+    
+
+    
+
+  </div>
+
+  
+
+  <script type="text/javascript">
+  function loadScript(url, callback) {
+    var script = document.createElement('script')
+    script.type = 'text/javascript';
+
+    if (script.readyState) { //IE
+      script.onreadystatechange = function() {
+        if (script.readyState == 'loaded' ||
+          script.readyState == 'complete') {
+          script.onreadystatechange = null;
+          callback();
+        }
+      };
+    } else { //Others
+      script.onload = function() {
+        callback();
+      };
+    }
+
+    script.src = url;
+    document.getElementsByTagName('head')[0].appendChild(script);
+  }
+
+  window.onload = function() {
+    loadScript('/js/bundle.js?235683', function() {
+      // load success
+    });
+  }
+</script>
+
+</body>
+</html>

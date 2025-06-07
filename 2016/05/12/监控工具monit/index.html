@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+
+
+  <html class="light page-post">
+
+
+<head>
+  <meta charset="utf-8">
+  
+  <title>监控工具monit | Mechanicwei Blog</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  
+    <meta name="keywords" content="后端,Ruby,Golang" />
+  
+
+  <meta name="description" content="monit  参考使用 Monit＋Mina 监控服务器 代码Monitrc123456789101112131415161718192021222324252627282930313233343536set daemon 20set logfile &#x2F;var&#x2F;log&#x2F;monit.logset idfile &#x2F;var&#x2F;lib&#x2F;monit&#x2F;idset statefile &#x2F;var&#x2F;lib&#x2F;moni">
+<meta property="og:type" content="article">
+<meta property="og:title" content="监控工具monit">
+<meta property="og:url" content="http://yoursite.com/2016/05/12/%E7%9B%91%E6%8E%A7%E5%B7%A5%E5%85%B7monit/index.html">
+<meta property="og:site_name" content="Mechanicwei Blog">
+<meta property="og:description" content="monit  参考使用 Monit＋Mina 监控服务器 代码Monitrc123456789101112131415161718192021222324252627282930313233343536set daemon 20set logfile &#x2F;var&#x2F;log&#x2F;monit.logset idfile &#x2F;var&#x2F;lib&#x2F;monit&#x2F;idset statefile &#x2F;var&#x2F;lib&#x2F;moni">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2016-05-11T16:00:00.000Z">
+<meta property="article:modified_time" content="2025-06-07T00:22:36.723Z">
+<meta property="article:author" content="hw93">
+<meta name="twitter:card" content="summary">
+
+  
+
+  
+    <link rel="icon" href="/favicon.ico">
+  
+
+  <link href="/css/styles.css?v=c114cbeddx" rel="stylesheet">
+
+
+  
+    
+<link rel="stylesheet" href="/css/personal-style.css">
+
+  
+
+  
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-38189205-1', 'auto');
+ga('send', 'pageview');
+
+</script>
+<!-- End Google Analytics -->
+
+
+  
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?57e94d016e201fba3603a8a2b0263af0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+  
+  <script type="text/javascript">
+	(function(){
+	    var bp = document.createElement('script');
+	    var curProtocol = window.location.protocol.split(':')[0];
+	    if (curProtocol === 'https') {
+	        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+	    }
+	    else {
+	        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+	    }
+	    var s = document.getElementsByTagName("script")[0];
+	    s.parentNode.insertBefore(bp, s);
+	})();
+  </script>
+
+
+
+  
+
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+<body>
+
+
+  
+
+  <div class="post-header">
+   
+
+</div>
+
+
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">Posts List</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%A3%E7%A0%81"><span class="toc-text">代码</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Monitrc"><span class="toc-text">Monitrc</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Nginx"><span class="toc-text">Nginx</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Memcached"><span class="toc-text">Memcached</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Postgres"><span class="toc-text">Postgres</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Redis"><span class="toc-text">Redis</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Sidekiq"><span class="toc-text">Sidekiq</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%81%87%E5%88%B0%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-text">遇到的问题</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1%E3%80%81puma%E9%87%8D%E5%90%AF%E5%A4%B1%E8%B4%A5"><span class="toc-text">1、puma重启失败</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2%E3%80%81%E6%B2%A1%E6%9C%89%E7%9B%91%E6%8E%A7sidekiq"><span class="toc-text">2、没有监控sidekiq</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3%E3%80%81%E5%8F%91%E9%80%81%E9%82%AE%E4%BB%B6%E5%A4%B1%E8%B4%A5"><span class="toc-text">3、发送邮件失败</span></a></li></ol></li></ol>
+  </div>
+
+
+
+<div class="content content-post CENTER">
+   <article id="post-监控工具monit" class="article article-type-post" itemprop="blogPost">
+  <header class="article-header">
+    <h1 class="post-title">监控工具monit</h1>
+
+    <div class="article-meta">
+      <span>
+        <i class="icon-calendar"></i>
+        <span>2016.05.12</span>
+      </span>
+
+      
+        <span class="article-author">
+          <i class="icon-user"></i>
+          <span>hw93</span>
+        </span>
+      
+
+      
+
+
+      
+
+      
+      
+    </div>
+  </header>
+
+  <div class="article-content">
+    
+      <blockquote>
+<p><a target="_blank" rel="noopener" href="https://mmonit.com/monit">monit</a></p>
+</blockquote>
+<p>参考<a target="_blank" rel="noopener" href="https://ruby-china.org/topics/23176">使用 Monit＋Mina 监控服务器</a></p>
+<h2 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h2><h3 id="Monitrc"><a href="#Monitrc" class="headerlink" title="Monitrc"></a>Monitrc</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">set daemon 20</span><br><span class="line">set logfile /var/log/monit.log</span><br><span class="line">set idfile /var/lib/monit/id</span><br><span class="line">set statefile /var/lib/monit/state</span><br><span class="line"></span><br><span class="line">set alert &lt;%= mail_alert %&gt;</span><br><span class="line">set mailserver &lt;%= mail_server %&gt; port &lt;%= mail_port %&gt;</span><br><span class="line">  username &lt;%= mail_username %&gt; password &lt;%= mail_password %&gt;</span><br><span class="line">  using SSLv3</span><br><span class="line">  with timeout 30 seconds</span><br><span class="line"></span><br><span class="line">set mail-format &#123;</span><br><span class="line">  from: &lt;%= mail_username %&gt;</span><br><span class="line">  subject: $SERVICE $EVENT at $DATE</span><br><span class="line">  message: Monit $ACTION $SERVICE</span><br><span class="line">          at $DATE</span><br><span class="line">          on $HOST</span><br><span class="line">          $DESCRIPTION.</span><br><span class="line">          Yours sincerely,</span><br><span class="line">          monit</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">set httpd port 2812 and</span><br><span class="line">  use address localhost</span><br><span class="line">  allow localhost</span><br><span class="line">  allow admin:monit</span><br><span class="line"></span><br><span class="line">check system localhost</span><br><span class="line">  if loadavg (1min) &gt; 4 then alert</span><br><span class="line">  if loadavg (5min) &gt; 2 then alert</span><br><span class="line">  if memory usage &gt; 90% then alert</span><br><span class="line">  if cpu usage (user) &gt; 70% for 3 cycles then alert</span><br><span class="line">  if cpu usage (system) &gt; 30% then alert</span><br><span class="line">  if cpu usage (wait) &gt; 20% then alert</span><br><span class="line"></span><br><span class="line">include /etc/monit/conf.d/*</span><br></pre></td></tr></table></figure>
+
+<h3 id="Nginx"><a href="#Nginx" class="headerlink" title="Nginx"></a>Nginx</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">check process nginx with pidfile /run/nginx.pid</span><br><span class="line">  start program = &quot;/etc/init.d/nginx start&quot; as uid &lt;%= user %&gt; and gid &lt;%= user %&gt;</span><br><span class="line">  stop  program = &quot;/etc/init.d/nginx stop&quot; as uid &lt;%= user %&gt; and gid &lt;%= user %&gt;</span><br><span class="line"></span><br><span class="line">  if loadavg(5min) greater than 10 for 8 cycles then stop</span><br><span class="line">  if 3 restarts within 5 cycles then timeout</span><br><span class="line">  if failed host 127.0.0.1 port 80 then restart</span><br><span class="line">  # if cpu is greater than 40% for 2 cycles then alert</span><br><span class="line">  # if cpu &gt; 60% for 5 cycles then restart</span><br></pre></td></tr></table></figure>
+
+
+
+
+<h3 id="Memcached"><a href="#Memcached" class="headerlink" title="Memcached"></a>Memcached</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">check process memcached with pidfile /var/run/memcached.pid</span><br><span class="line">  start program = &quot;/usr/sbin/service memcached start&quot;</span><br><span class="line">  stop program = &quot;/usr/sbin/service memcached stop&quot;</span><br><span class="line">  if failed host 127.0.0.1 port 11211 then restart</span><br><span class="line">  if 2 restarts within 3 cycles then timeout</span><br></pre></td></tr></table></figure>
+
+
+<h3 id="Postgres"><a href="#Postgres" class="headerlink" title="Postgres"></a><a href="#Postgres" title="Postgres"></a>Postgres</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">check process postgres with pidfile &lt;%= postgres_pidfile %&gt;</span><br><span class="line">   group database</span><br><span class="line">   start program = &quot;/etc/init.d/postgresql start&quot;</span><br><span class="line">   stop  program = &quot;/etc/init.d/postgresql stop&quot;</span><br><span class="line">   if failed unixsocket /var/run/postgresql/.s.PGSQL.5432 protocol pgsql</span><br><span class="line">      then restart</span><br><span class="line">   if failed host 127.0.0.1 port 5432 protocol pgsql then restart</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">check process puma</span><br><span class="line">  with pidfile &lt;%= deploy_to %&gt;/shared/tmp/pids/puma.pid</span><br><span class="line">  start program = &quot;/bin/bash -l -c &#x27;cd &lt;%= deploy_to %&gt;/&lt;%= current_path %&gt; &amp;&amp; PATH=&lt;%= home_dir %&gt;/.rbenv/shims:&lt;%= home_dir %&gt;/.rbenv/bin:$PATH &lt;%= puma_cmd %&gt; -q -d -e &lt;%= puma_env %&gt; -C &lt;%= puma_config %&gt;&#x27;&quot;</span><br><span class="line">  stop program = &quot;/bin/bash -l -c &#x27;cd &lt;%= deploy_to %&gt;/&lt;%= current_path %&gt; &amp;&amp; PATH=&lt;%= home_dir %&gt;/.rbenv/shims:&lt;%= home_dir %&gt;/.rbenv/bin:$PATH &lt;%= pumactl_cmd %&gt; -F &lt;%= puma_config %&gt; stop&#x27;&quot;</span><br><span class="line">  group puma</span><br><span class="line"></span><br><span class="line"># check process puma_worker_0</span><br><span class="line">#   with pidfile &lt;%= deploy_to %&gt;/shared/tmp/pids/puma_worker_0.pid</span><br><span class="line">#   if totalmem is greater than 700 MB for 2 cycles then exec &quot;/bin/bash -c &#x27;kill -s QUIT `cat &lt;%= deploy_to %&gt;/shared/tmp/pids/puma_worker_0.pid`&#x27;&quot;</span><br><span class="line"></span><br><span class="line"># check process puma_worker_1</span><br><span class="line">#   with pidfile &lt;%= deploy_to %&gt;/shared/tmp/pids/puma_worker_1.pid</span><br><span class="line">#   if totalmem is greater than 700 MB for 2 cycles then exec &quot;/bin/bash -c &#x27;kill -s QUIT `cat &lt;%= deploy_to %&gt;/shared/tmp/pids/puma_worker_1.pid`&#x27;&quot;</span><br></pre></td></tr></table></figure>
+
+
+<h3 id="Redis"><a href="#Redis" class="headerlink" title="Redis"></a>Redis</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">check process redis with pidfile /var/run/redis/redis-server.pid</span><br><span class="line">  start program = &quot;/etc/init.d/redis-server start&quot;</span><br><span class="line">  stop program = &quot;/etc/init.d/redis-server stop&quot;</span><br><span class="line">  group redis</span><br><span class="line"></span><br><span class="line">  if failed host 127.0.0.1 port 6379 then restart</span><br><span class="line">  if 5 restarts within 5 cycles then timeout</span><br></pre></td></tr></table></figure>
+
+<h3 id="Sidekiq"><a href="#Sidekiq" class="headerlink" title="Sidekiq"></a>Sidekiq</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">check process sidekiq</span><br><span class="line">  with pidfile &lt;%= deploy_to %&gt;/shared/tmp/pids/sidekiq.pid</span><br><span class="line">  start program = &quot;/bin/bash -c &#x27;cd &lt;%= deploy_to %&gt;/current; PATH=&lt;%= home_dir %&gt;/.rbenv/shims:&lt;%= home_dir %&gt;/.rbenv/bin:$PATH &lt;%= sidekiq %&gt; -d -e &lt;%= rails_env %&gt; -C &lt;%= sidekiq_config %&gt; -P &lt;%= sidekiq_pid %&gt; -L &lt;%= sidekiq_log %&gt;&#x27;&quot; as uid &lt;%= user %&gt; and gid &lt;%= user %&gt;</span><br><span class="line">  stop program  = &quot;/bin/bash -c &#x27;cd &lt;%= deploy_to %&gt;/current; PATH=&lt;%= home_dir %&gt;/.rbenv/shims:&lt;%= home_dir %&gt;/.rbenv/bin:$PATH &lt;%= sidekiqctl %&gt; stop &lt;%= sidekiq_pid %&gt; &lt;%= sidekiq_timeout %&gt;&#x27;&quot;</span><br><span class="line">  group sidekiq</span><br></pre></td></tr></table></figure>
+
+<h2 id="遇到的问题"><a href="#遇到的问题" class="headerlink" title="遇到的问题"></a>遇到的问题</h2><h3 id="1、puma重启失败"><a href="#1、puma重启失败" class="headerlink" title="1、puma重启失败"></a>1、puma重启失败</h3><blockquote>
+<p>failed to start</p>
+</blockquote>
+<p><a target="_blank" rel="noopener" href="http://stackoverflow.com/questions/3356476/debugging-monit">debugging-monit</a>，跟着这篇帖子调试，发现是PATH的原因，不能找到<code>bundle</code><br><code>PATH=&lt;%= home_dir %&gt;/.rbenv/shims:&lt;%= home_dir %&gt;/.rbenv/bin:$PATH</code><br>rvm对应的<a target="_blank" rel="noopener" href="https://noobsnippets.wordpress.com/2015/05/01/set-up-monit-for-sidekiq-on-rails-server/">设置</a></p>
+<h3 id="2、没有监控sidekiq"><a href="#2、没有监控sidekiq" class="headerlink" title="2、没有监控sidekiq"></a>2、没有监控sidekiq</h3><p>monit monitor sidekiq</p>
+<h3 id="3、发送邮件失败"><a href="#3、发送邮件失败" class="headerlink" title="3、发送邮件失败"></a>3、发送邮件失败</h3><blockquote>
+<p>mail from address must be same as authorization user</p>
+</blockquote>
+<p>得设置<code>mail-format</code></p>
+
+    
+  </div>
+
+</article>
+
+
+   
+
+   
+  <div class="box-prev-next clearfix">
+    <a class="show pull-left" href="/2016/04/27/%E9%83%A8%E7%BD%B2rails/">
+        <i class="icon icon-angle-left"></i>
+    </a>
+    <a class="show pull-right" href="/2016/07/19/%E5%8D%87%E7%BA%A7-Postgresql/">
+        <i class="icon icon-angle-right"></i>
+    </a>
+  </div>
+
+
+
+
+</div>
+
+
+
+
+
+  <div class="modal" id="modal">
+  <span id="cover" class="cover hide"></span>
+  <div id="modal-dialog" class="modal-dialog hide-dialog">
+    <div class="modal-header">
+      <span id="close" class="btn-close">Close</span>
+    </div>
+    <hr>
+    <div class="modal-body">
+      <ul class="list-toolbox">
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/archives/"
+              rel="noopener noreferrer"
+              target="_self"
+              >
+              博客
+            </a>
+          </li>
+        
+      </ul>
+
+    </div>
+  </div>
+</div>
+
+
+
+  
+      <div class="fexo-comments comments-post">
+    
+
+    
+
+    
+    
+
+    
+
+    
+    
+
+    
+
+  </div>
+
+  
+
+  <script type="text/javascript">
+  function loadScript(url, callback) {
+    var script = document.createElement('script')
+    script.type = 'text/javascript';
+
+    if (script.readyState) { //IE
+      script.onreadystatechange = function() {
+        if (script.readyState == 'loaded' ||
+          script.readyState == 'complete') {
+          script.onreadystatechange = null;
+          callback();
+        }
+      };
+    } else { //Others
+      script.onload = function() {
+        callback();
+      };
+    }
+
+    script.src = url;
+    document.getElementsByTagName('head')[0].appendChild(script);
+  }
+
+  window.onload = function() {
+    loadScript('/js/bundle.js?235683', function() {
+      // load success
+    });
+  }
+</script>
+
+</body>
+</html>
