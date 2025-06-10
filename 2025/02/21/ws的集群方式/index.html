@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+
+
+  <html class="light page-post">
+
+
+<head>
+  <meta charset="utf-8">
+  
+  <title>websocket的集群方式 | Mechanicwei Blog</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  
+    <meta name="keywords" content="后端,Ruby,Golang" />
+  
+
+  <meta name="description" content="方式一将连接信息存入db(如：redis、mysql)中，需要推送的时候，从db中查出连接信息，把消息推送给对应有连接的节点  redis：设置key的ttl mysql: 记录最后活跃时间  如果最后活跃时间超过一定时间，就认为连接失效https:&#x2F;&#x2F;github.com&#x2F;Terry-Mao&#x2F;goim 采用的就是该方式 方式二pub-sub（如：kafka、redis）将要推送的消息发布出去，各">
+<meta property="og:type" content="article">
+<meta property="og:title" content="websocket的集群方式">
+<meta property="og:url" content="http://yoursite.com/2025/02/21/ws%E7%9A%84%E9%9B%86%E7%BE%A4%E6%96%B9%E5%BC%8F/index.html">
+<meta property="og:site_name" content="Mechanicwei Blog">
+<meta property="og:description" content="方式一将连接信息存入db(如：redis、mysql)中，需要推送的时候，从db中查出连接信息，把消息推送给对应有连接的节点  redis：设置key的ttl mysql: 记录最后活跃时间  如果最后活跃时间超过一定时间，就认为连接失效https:&#x2F;&#x2F;github.com&#x2F;Terry-Mao&#x2F;goim 采用的就是该方式 方式二pub-sub（如：kafka、redis）将要推送的消息发布出去，各">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2025-02-20T16:00:00.000Z">
+<meta property="article:modified_time" content="2025-06-10T10:09:11.282Z">
+<meta property="article:author" content="hw93">
+<meta name="twitter:card" content="summary">
+
+  
+
+  
+    <link rel="icon" href="/favicon.ico">
+  
+
+  <link href="/css/styles.css?v=c114cbeddx" rel="stylesheet">
+
+
+  
+    
+<link rel="stylesheet" href="/css/personal-style.css">
+
+  
+
+  
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-38189205-1', 'auto');
+ga('send', 'pageview');
+
+</script>
+<!-- End Google Analytics -->
+
+
+  
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?57e94d016e201fba3603a8a2b0263af0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+  
+  <script type="text/javascript">
+	(function(){
+	    var bp = document.createElement('script');
+	    var curProtocol = window.location.protocol.split(':')[0];
+	    if (curProtocol === 'https') {
+	        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+	    }
+	    else {
+	        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+	    }
+	    var s = document.getElementsByTagName("script")[0];
+	    s.parentNode.insertBefore(bp, s);
+	})();
+  </script>
+
+
+
+  
+
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+<body>
+
+
+  
+
+  <div class="post-header">
+   
+
+</div>
+
+
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">Posts List</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%96%B9%E5%BC%8F%E4%B8%80"><span class="toc-text">方式一</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%96%B9%E5%BC%8F%E4%BA%8C"><span class="toc-text">方式二</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%96%B9%E5%BC%8F%E4%B8%89"><span class="toc-text">方式三</span></a></li></ol>
+  </div>
+
+
+
+<div class="content content-post CENTER">
+   <article id="post-ws的集群方式" class="article article-type-post" itemprop="blogPost">
+  <header class="article-header">
+    <h1 class="post-title">websocket的集群方式</h1>
+
+    <div class="article-meta">
+      <span>
+        <i class="icon-calendar"></i>
+        <span>2025.02.21</span>
+      </span>
+
+      
+        <span class="article-author">
+          <i class="icon-user"></i>
+          <span>hw93</span>
+        </span>
+      
+
+      
+
+
+      
+
+      
+      
+    </div>
+  </header>
+
+  <div class="article-content">
+    
+      <h2 id="方式一"><a href="#方式一" class="headerlink" title="方式一"></a>方式一</h2><p>将连接信息存入db(如：redis、mysql)中，需要推送的时候，从<strong>db</strong>中查出连接信息，把消息推送给对应有连接的节点</p>
+<ul>
+<li>redis：设置key的ttl</li>
+<li>mysql: 记录最后活跃时间</li>
+</ul>
+<p>如果最后活跃时间超过一定时间，就认为连接失效<br><a target="_blank" rel="noopener" href="https://github.com/Terry-Mao/goim">https://github.com/Terry-Mao/goim</a> 采用的就是该方式</p>
+<h2 id="方式二"><a href="#方式二" class="headerlink" title="方式二"></a>方式二</h2><p>pub-sub（如：kafka、redis）<br>将要推送的消息发布出去，各节点收到后判断自身有没有连接</p>
+<h2 id="方式三"><a href="#方式三" class="headerlink" title="方式三"></a>方式三</h2><p>每建立、断开一个连接，需要将连接信息广播到其他所有节点，每个节点在内存中都存了所有的连接信息<br>每个节点需要监听集群里其他节点，如果某个节点down了，需要从内存中删除该节点的连接信息<br>需要推送的时候，从<strong>内存</strong>中查出连接信息，把消息推送给对应有连接的节点</p>
+<p>该方式很适合Erlang，自带分布式，以下是对<a target="_blank" rel="noopener" href="https://github.com/suexcxine/simple_global">simple_global</a>的研究<br>Erlang的ets只是local的，simple_global用gen_server实现全局的ets（每个node的ets都包含所有的数据）</p>
+<p>新node启动的时候，向集群里的其他节点发送<code>sync_req</code></p>
+<figure class="highlight erlang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="title">init</span><span class="params">([])</span> -&gt;</span></span><br><span class="line">    process_flag(trap_exit, true),</span><br><span class="line">    ok = net_kernel:monitor_nodes(true),</span><br><span class="line">    broadcast([&#123;?SERVER, Node&#125; || Node &lt;- nodes()], &#123;sync_req, self()&#125;),</span><br><span class="line">    ets:new(?ETS, [ordered_set, named_table, public, &#123;keypos, <span class="number">1</span>&#125;, &#123;read_concurrency, true&#125;]),</span><br><span class="line">    &#123;ok, #&#123;peers =&gt; #&#123;&#125;&#125;&#125;.</span><br></pre></td></tr></table></figure>
+
+<p>其他节点收到<code>sync_req</code>后，把自己的ets数据同步给新node</p>
+<figure class="highlight erlang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="title">handle_info</span><span class="params">(&#123;sync_req, Peer&#125;, #&#123;peers := Peers&#125; = State)</span> -&gt;</span></span><br><span class="line">    gen_server:cast(Peer, &#123;sync_resp, self(), local_registered_info()&#125;),</span><br><span class="line">    ...</span><br></pre></td></tr></table></figure>
+
+<p>新node收到<code>sync_resp</code>后，把数据写入本地的ets</p>
+<figure class="highlight erlang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="title">handle_cast</span><span class="params">(&#123;sync_resp, Peer, Regs&#125;, #&#123;peers := Peers&#125; = State)</span> -&gt;</span></span><br><span class="line">    lists:foreach(<span class="keyword">fun</span></span><br><span class="line">        (&#123;Name, Pid&#125;) -&gt;</span><br><span class="line">            on_remote_reg_notify(Name, Pid);</span><br><span class="line">        (&#123;Name, Pid, Meta&#125;) -&gt;</span><br><span class="line">            on_remote_reg_notify(Name, Pid, Meta)</span><br><span class="line">    <span class="keyword">end</span>, Regs),</span><br><span class="line">    ...</span><br></pre></td></tr></table></figure>
+
+<p>收到新数据后，写入当前node的ets，并向集群里的其他节点发送<code>register_notify</code></p>
+<figure class="highlight erlang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="title">handle_call</span><span class="params">(&#123;register, Name, Pid&#125;, _From, #&#123;peers := Peers&#125; = State)</span> -&gt;</span></span><br><span class="line">    ...</span><br><span class="line">    MRef = erlang:monitor(process, Pid),</span><br><span class="line">    ets:insert(?ETS, &#123;Name, Pid, local, MRef, #&#123;&#125;&#125;),</span><br><span class="line">    ets:insert(?ETS, &#123;&#123;ref, MRef&#125;, Name&#125;),</span><br><span class="line">    broadcast(maps:keys(Peers), &#123;register_notify, self(), Name, Pid&#125;),</span><br><span class="line">    ...</span><br></pre></td></tr></table></figure>
+<p>同理，删除数据时，删除本地的ets数据，并向集群里的其他节点发送<code>unregister_notify</code></p>
+<p><strong>问：当一个node突然断电、kill、网络断开了，其他node如何处理？</strong><br>新node收到<code>sync_resp</code>后，除了写入ets，还会监听该node</p>
+<figure class="highlight erlang"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">MRef = erlang:monitor(process, Peer),</span><br></pre></td></tr></table></figure>
+<p>即使当一个node突然断电、kill、网络断开了，其他node也会收到<code>DOWN</code>事件，删除ets中属于该node的数据</p>
+<ul>
+<li>Erlang VM 的分布式心跳机制会检测连接状态</li>
+<li>所以通常在1-5 秒内会检测到连接中断，发送 DOWN 消息, Reasion为noconnection</li>
+</ul>
+<figure class="highlight erlang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="title">handle_info</span><span class="params">(&#123;&#x27;DOWN&#x27;, MRef, process, Peer, _Reason&#125;, #&#123;peers := Peers&#125; = State)</span> -&gt;</span></span><br><span class="line">    <span class="keyword">case</span> maps:take(Pid, Peers) <span class="keyword">of</span></span><br><span class="line">        &#123;_, LeftPeers&#125; -&gt;</span><br><span class="line">            Node = node(Pid),</span><br><span class="line">            Ms = [&#123;&#123;&#x27;_&#x27;, &#x27;_&#x27;, &#x27;$<span class="number">1</span>&#x27;, &#x27;_&#x27;, &#x27;_&#x27;&#125;, [&#123;&#x27;=:=&#x27;, &#x27;$<span class="number">1</span>&#x27;, Node&#125;], [true]&#125;],</span><br><span class="line">            ets:select_delete(?ETS, Ms),</span><br><span class="line">            <span class="comment">% we don&#x27;t need to clear ref records</span></span><br><span class="line">            <span class="comment">% since only local registration have those ref records</span></span><br><span class="line">            &#123;noreply, State#&#123;peers =&gt; LeftPeers&#125;&#125;;</span><br><span class="line">        _ -&gt;</span><br><span class="line">            &#123;noreply, State&#125;</span><br><span class="line">    <span class="keyword">end</span>;</span><br></pre></td></tr></table></figure>
+
+    
+  </div>
+
+</article>
+
+
+   
+
+   
+  <div class="box-prev-next clearfix">
+    <a class="show pull-left" href="/2024/08/21/%E9%97%AE%E9%A2%98%E8%AE%B0%E5%BD%95%E4%B9%8Bkafka%E7%94%9F%E4%BA%A7%E4%B9%B1%E5%BA%8F/">
+        <i class="icon icon-angle-left"></i>
+    </a>
+    <a class="show pull-right" href="/2025/04/30/es%E7%9B%B8%E5%85%B3%E9%97%AE%E9%A2%98/">
+        <i class="icon icon-angle-right"></i>
+    </a>
+  </div>
+
+
+
+
+</div>
+
+
+
+
+
+  <div class="modal" id="modal">
+  <span id="cover" class="cover hide"></span>
+  <div id="modal-dialog" class="modal-dialog hide-dialog">
+    <div class="modal-header">
+      <span id="close" class="btn-close">Close</span>
+    </div>
+    <hr>
+    <div class="modal-body">
+      <ul class="list-toolbox">
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/archives/"
+              rel="noopener noreferrer"
+              target="_self"
+              >
+              博客
+            </a>
+          </li>
+        
+      </ul>
+
+    </div>
+  </div>
+</div>
+
+
+
+  
+      <div class="fexo-comments comments-post">
+    
+
+    
+
+    
+    
+
+    
+
+    
+    
+
+    
+
+  </div>
+
+  
+
+  <script type="text/javascript">
+  function loadScript(url, callback) {
+    var script = document.createElement('script')
+    script.type = 'text/javascript';
+
+    if (script.readyState) { //IE
+      script.onreadystatechange = function() {
+        if (script.readyState == 'loaded' ||
+          script.readyState == 'complete') {
+          script.onreadystatechange = null;
+          callback();
+        }
+      };
+    } else { //Others
+      script.onload = function() {
+        callback();
+      };
+    }
+
+    script.src = url;
+    document.getElementsByTagName('head')[0].appendChild(script);
+  }
+
+  window.onload = function() {
+    loadScript('/js/bundle.js?235683', function() {
+      // load success
+    });
+  }
+</script>
+
+</body>
+</html>
