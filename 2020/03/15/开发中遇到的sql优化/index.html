@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+
+
+  <html class="light page-post">
+
+
+<head>
+  <meta charset="utf-8">
+  
+  <title>开发中遇到的sql优化 | Mechanicwei Blog</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  
+    <meta name="keywords" content="后端,Ruby,Golang" />
+  
+
+  <meta name="description" content="表结构1234567891011121314151617-- 每个namespace 50w条bills, 100w条details-- 1个bill对应2个detailscreate table bills(    id serial8 PRIMARY KEY,    namespace_id int8,    value1 text);create table details(    id s">
+<meta property="og:type" content="article">
+<meta property="og:title" content="开发中遇到的sql优化">
+<meta property="og:url" content="http://yoursite.com/2020/03/15/%E5%BC%80%E5%8F%91%E4%B8%AD%E9%81%87%E5%88%B0%E7%9A%84sql%E4%BC%98%E5%8C%96/index.html">
+<meta property="og:site_name" content="Mechanicwei Blog">
+<meta property="og:description" content="表结构1234567891011121314151617-- 每个namespace 50w条bills, 100w条details-- 1个bill对应2个detailscreate table bills(    id serial8 PRIMARY KEY,    namespace_id int8,    value1 text);create table details(    id s">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2020-03-15T08:14:08.000Z">
+<meta property="article:modified_time" content="2025-06-07T00:22:36.723Z">
+<meta property="article:author" content="hw93">
+<meta name="twitter:card" content="summary">
+
+  
+
+  
+    <link rel="icon" href="/favicon.ico">
+  
+
+  <link href="/css/styles.css?v=c114cbeddx" rel="stylesheet">
+
+
+  
+    
+<link rel="stylesheet" href="/css/personal-style.css">
+
+  
+
+  
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-38189205-1', 'auto');
+ga('send', 'pageview');
+
+</script>
+<!-- End Google Analytics -->
+
+
+  
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?57e94d016e201fba3603a8a2b0263af0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+  
+  <script type="text/javascript">
+	(function(){
+	    var bp = document.createElement('script');
+	    var curProtocol = window.location.protocol.split(':')[0];
+	    if (curProtocol === 'https') {
+	        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+	    }
+	    else {
+	        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+	    }
+	    var s = document.getElementsByTagName("script")[0];
+	    s.parentNode.insertBefore(bp, s);
+	})();
+  </script>
+
+
+
+  
+
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+<body>
+
+
+  
+
+  <div class="post-header">
+   
+
+</div>
+
+
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">Posts List</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%A1%A8%E7%BB%93%E6%9E%84"><span class="toc-text">表结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%87%8F%E5%B0%91Join%E6%9D%A1%E6%95%B0"><span class="toc-text">减少Join条数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Semi-Join"><span class="toc-text">Semi Join</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%A4%9A%E8%A1%A8%E8%81%94%E5%90%88%E6%9F%A5%E8%AF%A2-%E5%88%86%E9%A1%B5"><span class="toc-text">多表联合查询+分页</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BF%BD%E7%95%A5%E5%A4%A7%E5%B0%8F%E5%86%99%E5%8C%B9%E9%85%8D"><span class="toc-text">忽略大小写匹配</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%97%E4%BD%99%E5%AD%97%E6%AE%B5"><span class="toc-text">冗余字段</span></a></li></ol>
+  </div>
+
+
+
+<div class="content content-post CENTER">
+   <article id="post-开发中遇到的sql优化" class="article article-type-post" itemprop="blogPost">
+  <header class="article-header">
+    <h1 class="post-title">开发中遇到的sql优化</h1>
+
+    <div class="article-meta">
+      <span>
+        <i class="icon-calendar"></i>
+        <span>2020.03.15</span>
+      </span>
+
+      
+        <span class="article-author">
+          <i class="icon-user"></i>
+          <span>hw93</span>
+        </span>
+      
+
+      
+
+
+      
+
+      
+      
+    </div>
+  </header>
+
+  <div class="article-content">
+    
+      <h2 id="表结构"><a href="#表结构" class="headerlink" title="表结构"></a>表结构</h2><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 每个namespace 50w条bills, 100w条details</span></span><br><span class="line"><span class="comment">-- 1个bill对应2个details</span></span><br><span class="line"><span class="keyword">create</span> <span class="keyword">table</span> bills(</span><br><span class="line">    id serial8 <span class="keyword">PRIMARY</span> KEY,</span><br><span class="line">    namespace_id int8,</span><br><span class="line">    value1 text</span><br><span class="line">);</span><br><span class="line"><span class="keyword">create</span> <span class="keyword">table</span> details(</span><br><span class="line">    id serial8 <span class="keyword">PRIMARY</span> KEY,</span><br><span class="line">    namespace_id int8,</span><br><span class="line">    bill_id int8,</span><br><span class="line">    value2 text</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="keyword">create</span> index bill_namespace_id <span class="keyword">on</span> bills(namespace_id);</span><br><span class="line"><span class="keyword">create</span> index detail_namespace_id <span class="keyword">on</span> details(namespace_id);</span><br><span class="line"><span class="keyword">create</span> index detail_bill_id <span class="keyword">on</span> details(bill_id);</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">select count(*) from bills;</span><br><span class="line">  count</span><br><span class="line">----------</span><br><span class="line"> 10000000</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">select count(*) from details;</span><br><span class="line"></span><br><span class="line">  count</span><br><span class="line">----------</span><br><span class="line"> 20000000</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<h2 id="减少Join条数"><a href="#减少Join条数" class="headerlink" title="减少Join条数"></a>减少Join条数</h2><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 第一种</span></span><br><span class="line"><span class="keyword">select</span> <span class="built_in">count</span>(<span class="operator">*</span>)</span><br><span class="line"><span class="keyword">from</span> bills</span><br><span class="line"><span class="keyword">join</span> details <span class="keyword">on</span> bills.id <span class="operator">=</span> details.bill_id</span><br><span class="line"><span class="keyword">where</span> bills.namespace_id <span class="operator">=</span> <span class="number">1</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">Finalize Aggregate  (cost=375270.26..375270.27 rows=1 width=8) (actual time=6121.541..6121.541 rows=1 loops=1)</span><br><span class="line">  -&gt;  Gather  (cost=375270.05..375270.26 rows=2 width=8) (actual time=6116.538..6128.755 rows=3 loops=1)</span><br><span class="line">        Workers Planned: 2</span><br><span class="line">        Workers Launched: 2</span><br><span class="line">        -&gt;  Partial Aggregate  (cost=374270.05..374270.06 rows=1 width=8) (actual time=6088.944..6088.945 rows=1 loops=3)</span><br><span class="line">              -&gt;  Hash Join  (cost=25459.43..373254.77 rows=406111 width=0) (actual time=395.746..6038.096 rows=333333 loops=3)</span><br><span class="line">                    Hash Cond: (details.bill_id = bills.id)</span><br><span class="line">                    -&gt;  Parallel Seq Scan on details  (cost=0.00..258910.33 rows=8333333 width=8) (actual time=0.040..2076.963 rows=6666667 loops=3)</span><br><span class="line">                    -&gt;  Hash  (cost=17463.76..17463.76 rows=487333 width=8) (actual time=390.275..390.275 rows=500000 loops=3)</span><br><span class="line">                          Buckets: 131072  Batches: 8  Memory Usage: 3465kB</span><br><span class="line">                          -&gt;  Index Scan using bill_namespace_id on bills  (cost=0.43..17463.76 rows=487333 width=8) (actual time=0.078..205.115 rows=500000 loops=3)</span><br><span class="line">                                Index Cond: (namespace_id = 1)</span><br><span class="line">Planning time: 0.288 ms</span><br><span class="line">Execution time: 6128.963 ms</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 第二种</span></span><br><span class="line"><span class="keyword">select</span> <span class="built_in">count</span>(<span class="operator">*</span>)</span><br><span class="line"><span class="keyword">from</span> bills</span><br><span class="line"><span class="keyword">join</span> details <span class="keyword">on</span> bills.id <span class="operator">=</span> details.bill_id</span><br><span class="line"><span class="keyword">where</span> bills.namespace_id <span class="operator">=</span> <span class="number">1</span> <span class="keyword">and</span> details.namespace_id <span class="operator">=</span> <span class="number">1</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">Finalize Aggregate  (cost=63325.79..63325.80 rows=1 width=8) (actual time=986.875..986.876 rows=1 loops=1)</span><br><span class="line">  -&gt;  Gather  (cost=63325.58..63325.79 rows=2 width=8) (actual time=986.860..986.921 rows=3 loops=1)</span><br><span class="line">        Workers Planned: 2</span><br><span class="line">        Workers Launched: 2</span><br><span class="line">        -&gt;  Partial Aggregate  (cost=62325.58..62325.59 rows=1 width=8) (actual time=963.775..963.775 rows=1 loops=3)</span><br><span class="line">              -&gt;  Hash Join  (cost=25459.86..62276.03 rows=19818 width=0) (actual time=392.876..916.619 rows=333333 loops=3)</span><br><span class="line">                    Hash Cond: (details.bill_id = bills.id)</span><br><span class="line">                    -&gt;  Parallel Index Scan using detail_namespace_id on details  (cost=0.44..30667.10 rows=406667 width=8) (actual time=0.045..198.221 rows=333333 loops=3)</span><br><span class="line">                          Index Cond: (namespace_id = 1)</span><br><span class="line">                    -&gt;  Hash  (cost=17463.76..17463.76 rows=487333 width=8) (actual time=391.705..391.706 rows=500000 loops=3)</span><br><span class="line">                          Buckets: 131072  Batches: 8  Memory Usage: 3465kB</span><br><span class="line">                          -&gt;  Index Scan using bill_namespace_id on bills  (cost=0.43..17463.76 rows=487333 width=8) (actual time=0.063..211.667 rows=500000 loops=3)</span><br><span class="line">                                Index Cond: (namespace_id = 1)</span><br><span class="line">Planning time: 0.353 ms</span><br><span class="line">Execution time: 987.010 ms</span><br></pre></td></tr></table></figure>
+
+
+<p>每个namespace的数据是独立的，所以无论加不加<code>details.namespace_id = 1</code>的限制，查询结果是一样的<br>从查询过程来看，都是<code>Hash Join</code>，但是第二种有<code>details.namespace_id = 1</code>的限制，details的条数要少很多，所以join就快了很多</p>
+<h2 id="Semi-Join"><a href="#Semi-Join" class="headerlink" title="Semi Join"></a>Semi Join</h2><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> <span class="built_in">count</span>(<span class="keyword">distinct</span> bills.id)</span><br><span class="line"><span class="keyword">from</span> bills</span><br><span class="line"><span class="keyword">join</span> details <span class="keyword">on</span> bills.id <span class="operator">=</span> details.bill_id</span><br><span class="line"><span class="keyword">where</span> bills.namespace_id <span class="operator">=</span> <span class="number">1</span> <span class="keyword">and</span> details.namespace_id <span class="operator">=</span> <span class="number">1</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">Aggregate  (cost=68147.31..68147.32 rows=1 width=8) (actual time=1904.399..1904.399 rows=1 loops=1)</span><br><span class="line">  -&gt;  Gather  (cost=26459.86..68028.43 rows=47553 width=8) (actual time=620.552..1492.368 rows=1000000 loops=1)</span><br><span class="line">        Workers Planned: 2</span><br><span class="line">        Workers Launched: 2</span><br><span class="line">        -&gt;  Hash Join  (cost=25459.86..62273.13 rows=19814 width=8) (actual time=612.397..1206.006 rows=333333 loops=3)</span><br><span class="line">              Hash Cond: (details.bill_id = bills.id)</span><br><span class="line">              -&gt;  Parallel Index Scan using detail_namespace_id on details  (cost=0.44..30664.46 rows=406572 width=8) (actual time=0.044..268.003 rows=333333 loops=3)</span><br><span class="line">                    Index Cond: (namespace_id = 1)</span><br><span class="line">              -&gt;  Hash  (cost=17463.76..17463.76 rows=487333 width=8) (actual time=610.177..610.178 rows=500000 loops=3)</span><br><span class="line">                    Buckets: 131072  Batches: 8  Memory Usage: 3465kB</span><br><span class="line">                    -&gt;  Index Scan using bill_namespace_id on bills  (cost=0.43..17463.76 rows=487333 width=8) (actual time=0.216..416.889 rows=500000 loops=3)</span><br><span class="line">                          Index Cond: (namespace_id = 1)</span><br><span class="line">Planning time: 0.434 ms</span><br><span class="line">Execution time: 1904.698 ms</span><br></pre></td></tr></table></figure>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> <span class="built_in">count</span>(<span class="operator">*</span>)</span><br><span class="line"><span class="keyword">from</span> bills</span><br><span class="line"><span class="keyword">where</span> bills.namespace_id <span class="operator">=</span> <span class="number">1</span> <span class="keyword">and</span> <span class="keyword">exists</span> (</span><br><span class="line">    <span class="keyword">select</span> <span class="number">1</span> <span class="keyword">from</span> details <span class="keyword">where</span> namespace_id <span class="operator">=</span> <span class="number">1</span> <span class="keyword">and</span> bill_id <span class="operator">=</span> bills.id</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">Finalize Aggregate  (cost=107180.12..107180.13 rows=1 width=8) (actual time=1443.874..1443.874 rows=1 loops=1)</span><br><span class="line">  -&gt;  Gather  (cost=107179.91..107180.12 rows=2 width=8) (actual time=1443.859..1443.917 rows=3 loops=1)</span><br><span class="line">        Workers Planned: 2</span><br><span class="line">        Workers Launched: 2</span><br><span class="line">        -&gt;  Partial Aggregate  (cost=106179.91..106179.92 rows=1 width=8) (actual time=1417.344..1417.344 rows=1 loops=3)</span><br><span class="line">              -&gt;  Hash Semi Join  (cost=52366.06..106130.37 rows=19814 width=0) (actual time=956.872..1392.469 rows=166667 loops=3)</span><br><span class="line">                    Hash Cond: (bills.id = details.bill_id)</span><br><span class="line">                    -&gt;  Parallel Index Scan using bill_namespace_id on bills  (cost=0.43..14620.99 rows=203055 width=8) (actual time=0.076..93.284 rows=166667 loops=3)</span><br><span class="line">                          Index Cond: (namespace_id = 1)</span><br><span class="line">                    -&gt;  Hash  (cost=36356.46..36356.46 rows=975773 width=8) (actual time=950.513..950.513 rows=1000000 loops=3)</span><br><span class="line">                          Buckets: 131072  Batches: 16  Memory Usage: 3467kB</span><br><span class="line">                          -&gt;  Index Scan using detail_namespace_id on details  (cost=0.44..36356.46 rows=975773 width=8) (actual time=0.180..523.307 rows=1000000 loops=3)</span><br><span class="line">                                Index Cond: (namespace_id = 1)</span><br><span class="line">Planning time: 2.131 ms</span><br><span class="line">Execution time: 1444.183 ms</span><br></pre></td></tr></table></figure>
+
+<p>第一种是<code>Hash Join</code>，第二种是<code>Hash Semi Join</code></p>
+<h2 id="多表联合查询-分页"><a href="#多表联合查询-分页" class="headerlink" title="多表联合查询+分页"></a>多表联合查询+分页</h2><p>场景：要将两个(或多个)表联合起来，得到结果再与其他表关联，最后分页</p>
+<p>构建另一个联合的表(bill2)</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 也插入1000w数据，每个namespace 50w</span></span><br><span class="line"><span class="keyword">create</span> <span class="keyword">table</span> bills2(</span><br><span class="line">    id serial8 <span class="keyword">PRIMARY</span> KEY,</span><br><span class="line">    namespace_id int8,</span><br><span class="line">    value1 text</span><br><span class="line">);</span><br><span class="line"><span class="keyword">create</span> index bill2_namespace_id <span class="keyword">on</span> bills2(namespace_id);</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> (</span><br><span class="line">    (<span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> bills <span class="keyword">where</span> namespace_id <span class="operator">=</span> <span class="number">1</span>)</span><br><span class="line">    <span class="keyword">union</span> <span class="keyword">all</span></span><br><span class="line">    (<span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> bills2 <span class="keyword">where</span> namespace_id <span class="operator">=</span> <span class="number">1</span>)</span><br><span class="line">) tmp</span><br><span class="line"><span class="keyword">join</span> details <span class="keyword">on</span> tmp.id <span class="operator">=</span> details.bill_id</span><br><span class="line"><span class="keyword">order</span> <span class="keyword">by</span> value1 <span class="keyword">asc</span></span><br><span class="line">limit <span class="number">20</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">Limit  (cost=1164304.65..1164304.70 rows=20 width=71) (actual time=2991.903..2991.909 rows=20 loops=1)</span><br><span class="line">  -&gt;  Sort  (cost=1164304.65..1179449.08 rows=6057772 width=71) (actual time=2991.902..2991.903 rows=20 loops=1)</span><br><span class="line">        Sort Key: bills.value1</span><br><span class="line">        Sort Method: top-N heapsort  Memory: 27kB</span><br><span class="line">        -&gt;  Merge Join  (cost=164947.82..1003109.52 rows=6057772 width=71) (actual time=732.101..2023.895 rows=2000000 loops=1)</span><br><span class="line">              Merge Cond: (details.bill_id = bills.id)</span><br><span class="line">              -&gt;  Index Scan using detail_bill_id on details  (cost=0.44..694870.54 rows=19995340 width=40) (actual time=0.023..250.777 rows=1000001 loops=1)</span><br><span class="line">              -&gt;  Materialize  (cost=164947.38..169820.71 rows=974666 width=31) (actual time=732.074..1123.807 rows=1999999 loops=1)</span><br><span class="line">                    -&gt;  Sort  (cost=164947.38..167384.05 rows=974666 width=31) (actual time=732.070..895.457 rows=1000000 loops=1)</span><br><span class="line">                          Sort Key: bills.id</span><br><span class="line">                          Sort Method: external merge  Disk: 40000kB</span><br><span class="line">                          -&gt;  Append  (cost=0.43..44674.18 rows=974666 width=31) (actual time=0.026..317.829 rows=1000000 loops=1)</span><br><span class="line">                                -&gt;  Index Scan using bill_namespace_id on bills  (cost=0.43..17463.76 rows=487333 width=31) (actual time=0.026..103.220 rows=500000 loops=1)</span><br><span class="line">                                      Index Cond: (namespace_id = 1)</span><br><span class="line">                                -&gt;  Index Scan using bill2_namespace_id on bills2  (cost=0.43..17463.76 rows=487333 width=31) (actual time=0.021..95.693 rows=500000 loops=1)</span><br><span class="line">                                      Index Cond: (namespace_id = 1)</span><br><span class="line">Planning time: 0.490 ms</span><br><span class="line">Execution time: 2999.380 ms</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> (</span><br><span class="line">    (<span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> bills <span class="keyword">where</span> namespace_id <span class="operator">=</span> <span class="number">1</span> <span class="keyword">order</span> <span class="keyword">by</span> value1 <span class="keyword">asc</span> limit <span class="number">20</span>)</span><br><span class="line">    <span class="keyword">union</span> <span class="keyword">all</span></span><br><span class="line">    (<span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> bills2 <span class="keyword">where</span> namespace_id <span class="operator">=</span> <span class="number">1</span> <span class="keyword">order</span> <span class="keyword">by</span> value1 <span class="keyword">asc</span> limit <span class="number">20</span>)</span><br><span class="line">) tmp</span><br><span class="line"><span class="keyword">join</span> details <span class="keyword">on</span> tmp.id <span class="operator">=</span> details.bill_id</span><br><span class="line"><span class="keyword">order</span> <span class="keyword">by</span> value1 <span class="keyword">asc</span> limit <span class="number">20</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">Limit  (cost=60863.48..60891.15 rows=20 width=71) (actual time=1347.949..1349.095 rows=20 loops=1)</span><br><span class="line">  -&gt;  Nested Loop  (cost=60863.48..61207.95 rows=249 width=71) (actual time=1347.948..1349.088 rows=20 loops=1)</span><br><span class="line">        -&gt;  Merge Append  (cost=60863.05..60863.85 rows=40 width=31) (actual time=1347.935..1347.958 rows=10 loops=1)</span><br><span class="line">              Sort Key: bills.value1</span><br><span class="line">              -&gt;  Limit  (cost=30431.52..30431.57 rows=20 width=31) (actual time=686.947..686.949 rows=6 loops=1)</span><br><span class="line">                    -&gt;  Sort  (cost=30431.52..31649.85 rows=487333 width=31) (actual time=686.946..686.947 rows=6 loops=1)</span><br><span class="line">                          Sort Key: bills.value1</span><br><span class="line">                          Sort Method: top-N heapsort  Memory: 26kB</span><br><span class="line">                          -&gt;  Index Scan using bill_namespace_id on bills  (cost=0.43..17463.76 rows=487333 width=31) (actual time=0.036..104.420 rows=500000 loops=1)</span><br><span class="line">                                Index Cond: (namespace_id = 1)</span><br><span class="line">              -&gt;  Limit  (cost=30431.52..30431.57 rows=20 width=31) (actual time=660.985..660.987 rows=5 loops=1)</span><br><span class="line">                    -&gt;  Sort  (cost=30431.52..31649.85 rows=487333 width=31) (actual time=660.984..660.985 rows=5 loops=1)</span><br><span class="line">                          Sort Key: bills2.value1</span><br><span class="line">                          Sort Method: top-N heapsort  Memory: 27kB</span><br><span class="line">                          -&gt;  Index Scan using bill2_namespace_id on bills2  (cost=0.43..17463.76 rows=487333 width=31) (actual time=0.016..99.822 rows=500000 loops=1)</span><br><span class="line">                                Index Cond: (namespace_id = 1)</span><br><span class="line">        -&gt;  Index Scan using detail_bill_id on details  (cost=0.44..8.54 rows=6 width=40) (actual time=0.111..0.111 rows=2 loops=10)</span><br><span class="line">              Index Cond: (bill_id = bills.id)</span><br><span class="line">Planning time: 0.453 ms</span><br><span class="line">Execution time: 1349.165 ms</span><br></pre></td></tr></table></figure>
+
+<p>第二个sql在联合之前先做一次<code>order + limit</code>，这样后面join details表就会少很多数据</p>
+<p>如果查询第二页的话</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> (</span><br><span class="line">    (<span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> bills <span class="keyword">where</span> namespace_id <span class="operator">=</span> <span class="number">1</span> <span class="keyword">order</span> <span class="keyword">by</span> value1 <span class="keyword">asc</span> limit <span class="number">40</span>)</span><br><span class="line">    <span class="keyword">union</span> <span class="keyword">all</span></span><br><span class="line">    (<span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> bills2 <span class="keyword">where</span> namespace_id <span class="operator">=</span> <span class="number">1</span> <span class="keyword">order</span> <span class="keyword">by</span> value1 <span class="keyword">asc</span> limit <span class="number">40</span>)</span><br><span class="line">) tmp</span><br><span class="line"><span class="keyword">join</span> details <span class="keyword">on</span> tmp.id <span class="operator">=</span> details.bill_id</span><br><span class="line"><span class="keyword">order</span> <span class="keyword">by</span> value1 <span class="keyword">asc</span> <span class="keyword">offset</span> <span class="number">20</span> limit <span class="number">20</span></span><br></pre></td></tr></table></figure>
+<p>因为我们不知道第一页里bills，bill2表占了多少数据，所以需要<code>limit 40</code>，同理第三页就需要<code>limit 60</code></p>
+<h2 id="忽略大小写匹配"><a href="#忽略大小写匹配" class="headerlink" title="忽略大小写匹配"></a>忽略大小写匹配</h2><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> <span class="built_in">count</span>(<span class="operator">*</span>) <span class="keyword">from</span> bills <span class="keyword">where</span> value1 ilike <span class="string">&#x27;VaLue-%&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">  count</span><br><span class="line">----------</span><br><span class="line"> 10000000</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">Time: 6589.374 ms (00:06.589)</span><br></pre></td></tr></table></figure>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> <span class="built_in">count</span>(<span class="operator">*</span>) <span class="keyword">from</span> bills <span class="keyword">where</span> <span class="built_in">upper</span>(value1) <span class="keyword">like</span> <span class="built_in">upper</span>(<span class="string">&#x27;VaLue-%&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">  count</span><br><span class="line">----------</span><br><span class="line"> 10000000</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">Time: 4730.915 ms (00:04.731)</span><br></pre></td></tr></table></figure>
+
+<p>第一种使用<code>ilike</code><br>第二种把查询内容和字段值都转换为大写，再来<code>like</code>匹配</p>
+<h2 id="冗余字段"><a href="#冗余字段" class="headerlink" title="冗余字段"></a>冗余字段</h2><p>因为数据库执行Join操作并不是很快，增加冗余字段，减少Join的表也可以减少查询时间</p>
+
+    
+  </div>
+
+</article>
+
+
+   
+
+   
+  <div class="box-prev-next clearfix">
+    <a class="show pull-left" href="/2018/01/03/Postgres-Advisory-Locks/">
+        <i class="icon icon-angle-left"></i>
+    </a>
+    <a class="show pull-right" href="/2020/03/22/Ruby%E4%B8%8EGolang/">
+        <i class="icon icon-angle-right"></i>
+    </a>
+  </div>
+
+
+
+
+</div>
+
+
+
+
+
+  <div class="modal" id="modal">
+  <span id="cover" class="cover hide"></span>
+  <div id="modal-dialog" class="modal-dialog hide-dialog">
+    <div class="modal-header">
+      <span id="close" class="btn-close">Close</span>
+    </div>
+    <hr>
+    <div class="modal-body">
+      <ul class="list-toolbox">
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/archives/"
+              rel="noopener noreferrer"
+              target="_self"
+              >
+              博客
+            </a>
+          </li>
+        
+      </ul>
+
+    </div>
+  </div>
+</div>
+
+
+
+  
+      <div class="fexo-comments comments-post">
+    
+
+    
+
+    
+    
+
+    
+
+    
+    
+
+    
+
+  </div>
+
+  
+
+  <script type="text/javascript">
+  function loadScript(url, callback) {
+    var script = document.createElement('script')
+    script.type = 'text/javascript';
+
+    if (script.readyState) { //IE
+      script.onreadystatechange = function() {
+        if (script.readyState == 'loaded' ||
+          script.readyState == 'complete') {
+          script.onreadystatechange = null;
+          callback();
+        }
+      };
+    } else { //Others
+      script.onload = function() {
+        callback();
+      };
+    }
+
+    script.src = url;
+    document.getElementsByTagName('head')[0].appendChild(script);
+  }
+
+  window.onload = function() {
+    loadScript('/js/bundle.js?235683', function() {
+      // load success
+    });
+  }
+</script>
+
+</body>
+</html>

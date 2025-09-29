@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+
+
+  <html class="light page-post">
+
+
+<head>
+  <meta charset="utf-8">
+  
+  <title>Ruby &amp; Golang | Mechanicwei Blog</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  
+    <meta name="keywords" content="后端,Ruby,Golang" />
+  
+
+  <meta name="description" content="Ruby 松本行弘（Ruby的作者）被问及为什么要开发Ruby，”因为它给我带来了快乐“  刚接触Ruby的时候，深深了被Ruby的简洁性、优雅性所吸引。很喜欢Ruby的设计理念，注重人性化，而不是一味从机器的角度设想最简单Hello World只需要18个字符，代码看起来很清爽，其他语言100行干的事情，可能Ruby50行就可以，甚至更少 1puts &amp;#x27;Hello World&amp;#x27">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Ruby &amp; Golang">
+<meta property="og:url" content="http://yoursite.com/2020/03/22/Ruby%E4%B8%8EGolang/index.html">
+<meta property="og:site_name" content="Mechanicwei Blog">
+<meta property="og:description" content="Ruby 松本行弘（Ruby的作者）被问及为什么要开发Ruby，”因为它给我带来了快乐“  刚接触Ruby的时候，深深了被Ruby的简洁性、优雅性所吸引。很喜欢Ruby的设计理念，注重人性化，而不是一味从机器的角度设想最简单Hello World只需要18个字符，代码看起来很清爽，其他语言100行干的事情，可能Ruby50行就可以，甚至更少 1puts &amp;#x27;Hello World&amp;#x27">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2020-03-22T15:12:11.000Z">
+<meta property="article:modified_time" content="2025-06-07T00:22:36.723Z">
+<meta property="article:author" content="hw93">
+<meta name="twitter:card" content="summary">
+
+  
+
+  
+    <link rel="icon" href="/favicon.ico">
+  
+
+  <link href="/css/styles.css?v=c114cbeddx" rel="stylesheet">
+
+
+  
+    
+<link rel="stylesheet" href="/css/personal-style.css">
+
+  
+
+  
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-38189205-1', 'auto');
+ga('send', 'pageview');
+
+</script>
+<!-- End Google Analytics -->
+
+
+  
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?57e94d016e201fba3603a8a2b0263af0";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+  
+  <script type="text/javascript">
+	(function(){
+	    var bp = document.createElement('script');
+	    var curProtocol = window.location.protocol.split(':')[0];
+	    if (curProtocol === 'https') {
+	        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+	    }
+	    else {
+	        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+	    }
+	    var s = document.getElementsByTagName("script")[0];
+	    s.parentNode.insertBefore(bp, s);
+	})();
+  </script>
+
+
+
+  
+
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+<body>
+
+
+  
+
+  <div class="post-header">
+   
+
+</div>
+
+
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">Posts List</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Ruby"><span class="toc-text">Ruby</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Golang"><span class="toc-text">Golang</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9C%80%E5%90%8E"><span class="toc-text">最后</span></a></li></ol>
+  </div>
+
+
+
+<div class="content content-post CENTER">
+   <article id="post-Ruby与Golang" class="article article-type-post" itemprop="blogPost">
+  <header class="article-header">
+    <h1 class="post-title">Ruby &amp; Golang</h1>
+
+    <div class="article-meta">
+      <span>
+        <i class="icon-calendar"></i>
+        <span>2020.03.22</span>
+      </span>
+
+      
+        <span class="article-author">
+          <i class="icon-user"></i>
+          <span>hw93</span>
+        </span>
+      
+
+      
+
+
+      
+
+      
+      
+    </div>
+  </header>
+
+  <div class="article-content">
+    
+      <h2 id="Ruby"><a href="#Ruby" class="headerlink" title="Ruby"></a>Ruby</h2><blockquote>
+<p>松本行弘（Ruby的作者）被问及为什么要开发Ruby，”因为它给我带来了快乐“</p>
+</blockquote>
+<p>刚接触Ruby的时候，深深了被Ruby的简洁性、优雅性所吸引。很喜欢Ruby的设计理念，注重人性化，而不是一味从机器的角度设想<br>最简单Hello World只需要18个字符，代码看起来很清爽，其他语言100行干的事情，可能Ruby50行就可以，甚至更少</p>
+<figure class="highlight ruby"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">puts <span class="string">&#x27;Hello World&#x27;</span></span><br></pre></td></tr></table></figure>
+<p>当时觉得程序员就应该是使用高效的工具，高效的做事，而Ruby就是一个这样的工具。Rails有个宣传视频，10分钟内写出一个blog，在之前前后端分离还不是很流行的时候，使用Rails开发Web，开发效率真的非常高。当然现在开发效率也可以，只不过和其他语言的框架差距没有那么大了。</p>
+<p>Ruby的特点</p>
+<ul>
+<li>方法定义、调用可以省略括号，这让Ruby非常适合定制DSL</li>
+<li>完全面向对象，连操作符(+-*)都是对象的方法</li>
+<li>非常高的动态性，程序员可以动态的定义一个Class，动态的改写任何一个Class(包括标准库)的方法等等</li>
+</ul>
+<p>大部分Rubyist都喜欢追求代码的优雅性，追求DRY，利用Ruby提供的动态性，用着各种奇淫技巧去抽象代码。动态性是一把双刃剑，它确实很好的帮助了程序员去抽象代码，但同时也让他人去理解其实现逻辑变得有些困难。我曾经多次想把Rails完全搞懂，但在Rails的高度抽象性与动态性这两座大山面前，不得不放弃。举个例子，如果你想通过打断点的方式从<code>record.save</code>开始，去调试model的callback相关的问题，那真的一种痛苦。</p>
+<h2 id="Golang"><a href="#Golang" class="headerlink" title="Golang"></a>Golang</h2><p>有着C的基础，Go是一门很容易上手的语言，简单，内置协程，易于高并发。Go秉持的是KISS原则(KEEP IT SIMPLE , STUPID)，从优雅性上来讲，可以说和Ruby是两个极端，Go是傻瓜式的简单。但受够了Ruby的各种魔法般的技巧，Go这种傻瓜式的简单也有一番风味。</p>
+<p>Go也有一些地方让人诟病的地方：</p>
+<ul>
+<li>error的处理：习惯的Exception的处理方式，最开始确实很不适应，每个调用都判断error一次，写起来繁琐而不优雅，写多了习惯就好了</li>
+<li>没有三元表达式：确实难受，只能忍着</li>
+<li>没有泛型：虽然有<code>interface&#123;&#125;</code>，但是<code>interface&#123;&#125;</code>失去了编译时期的类型安全，好像2.0会引入泛型</li>
+</ul>
+<h2 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h2><p>Ruby带给我的更多的是编程思想上的提升，在学习Go之前，我追求的更多是如何写出逻辑清晰，易于扩展，性能高的代码上。Go的简单、静态以及实现了自举，可以很方便的去研究Go的内部实现（slice、map、channel，并发安全，GPM并发模型，GC，内存分配，内存模型等等），对编程语言有了一个更深层次的理解。<br>Ruby带给我了高效优雅实现业务功能的快乐，Go带我了知其然知其所以然的快乐。</p>
+
+    
+  </div>
+
+</article>
+
+
+   
+
+   
+  <div class="box-prev-next clearfix">
+    <a class="show pull-left" href="/2020/03/15/%E5%BC%80%E5%8F%91%E4%B8%AD%E9%81%87%E5%88%B0%E7%9A%84sql%E4%BC%98%E5%8C%96/">
+        <i class="icon icon-angle-left"></i>
+    </a>
+    <a class="show pull-right" href="/2021/08/25/%E4%BB%8EMysql%E4%B8%8D%E5%81%9C%E6%9C%BA%E8%BF%81%E7%A7%BB%E5%88%B0Cassandra/">
+        <i class="icon icon-angle-right"></i>
+    </a>
+  </div>
+
+
+
+
+</div>
+
+
+
+
+
+  <div class="modal" id="modal">
+  <span id="cover" class="cover hide"></span>
+  <div id="modal-dialog" class="modal-dialog hide-dialog">
+    <div class="modal-header">
+      <span id="close" class="btn-close">Close</span>
+    </div>
+    <hr>
+    <div class="modal-body">
+      <ul class="list-toolbox">
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/archives/"
+              rel="noopener noreferrer"
+              target="_self"
+              >
+              博客
+            </a>
+          </li>
+        
+      </ul>
+
+    </div>
+  </div>
+</div>
+
+
+
+  
+      <div class="fexo-comments comments-post">
+    
+
+    
+
+    
+    
+
+    
+
+    
+    
+
+    
+
+  </div>
+
+  
+
+  <script type="text/javascript">
+  function loadScript(url, callback) {
+    var script = document.createElement('script')
+    script.type = 'text/javascript';
+
+    if (script.readyState) { //IE
+      script.onreadystatechange = function() {
+        if (script.readyState == 'loaded' ||
+          script.readyState == 'complete') {
+          script.onreadystatechange = null;
+          callback();
+        }
+      };
+    } else { //Others
+      script.onload = function() {
+        callback();
+      };
+    }
+
+    script.src = url;
+    document.getElementsByTagName('head')[0].appendChild(script);
+  }
+
+  window.onload = function() {
+    loadScript('/js/bundle.js?235683', function() {
+      // load success
+    });
+  }
+</script>
+
+</body>
+</html>
